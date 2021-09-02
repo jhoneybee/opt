@@ -49,37 +49,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "com"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d739be89c388a01f79686eb56100d19f9162b3dac0c36b4157a476d6e8a3e4fd"
-dependencies = [
- "com_macros",
-]
-
-[[package]]
-name = "com_macros"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8943f1cabf673dcdc98db34c91487998ce171d41dc6ef54433c78592c1eac73"
-dependencies = [
- "com_macros_support",
- "proc-macro2",
- "syn",
-]
-
-[[package]]
-name = "com_macros_support"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "389e61f4360a85700567be112b9a4481168e987f57db9bdff11e68b76512d932"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "cpufeatures"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -228,6 +197,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
+name = "opt"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "parking_lot"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -339,17 +318,6 @@ dependencies = [
  "libc",
  "wasi",
  "winapi",
-]
-
-[[package]]
-name = "to-pdf"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "chrono",
- "com",
- "sha2",
- "tokio",
 ]
 
 [[package]]

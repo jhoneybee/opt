@@ -1,5 +1,5 @@
 [package]
-name = "to-pdf"
+name = "opt"
 version = "0.1.0"
 authors = ["jhonebee <zhangjin19960908@gamil.com>"]
 edition = "2018"
@@ -11,4 +11,3 @@ tokio = { version = "1", features = ["full"] }
 bytes = "1.1.0"
 sha2 = "0.9.6"
 chrono = "0.4.19"
-com = "0.4.0"
