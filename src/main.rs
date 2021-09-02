@@ -7,6 +7,8 @@ use bytes::{BufMut, BytesMut};
 use chrono;
 use sha2::{Sha256, Digest};
 
+use crate::vbs::ms_export::MSFileType;
+
 mod vbs;
 
 fn as_u32_le(array: &[u8]) -> u32 {
@@ -64,28 +66,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     fs::write(&file_path, &content[4..]).unwrap();
                 }
             
-                match file_type {
-                    0 => {
-                        let pdf_path = format!("{}.pdf", &file_path);
-                        if !Path::new(&pdf_path).exists() {
-                            match vbs::ms_export::ms_word_export_pdf(file_path.as_str(), &format!(".cache/{}.pdf", id)).await {
-                                Err(e) => {
-                                    eprintln!("ERRPR -> failed to word export pdf; err = {:?}", e);
-                                }
-                                Ok(_) => return ,
-                            };
+                let ms_file_type = match file_type {
+                    0 => MSFileType::WORD,
+                    1 => MSFileType::EXCEL,
+                    2 => MSFileType::PPT,
+                    _ => MSFileType::WORD,
+                };
+
+                let pdf_path = format!("{}.pdf", &file_path);
+                if !Path::new(&pdf_path).exists() {
+                    match vbs::ms_export::ms_export_pdf(
+                        file_path.as_str(),
+                        &format!(".cache/{}.pdf", id),
+                        ms_file_type,
+                    ).await {
+                        Err(e) => {
+                            eprintln!("ERRPR -> failed to word export pdf; err = {:?}", e);
                         }
-    
-                        let content = fs::read(&file_path).unwrap();
-                        if let Err(e) = socket.write_all(&content[0..]).await {
-                            eprintln!("ERROR -> failed to write to socket; err = {:?}", e);
-                            return;
-                        };
-                    }
-                    _ => {
-                        eprintln!("ERROR -> Unknown file type [{}]", file_type);
-                    }
+                        Ok(_) => return ,
+                    };
                 }
+
+                let content = fs::read(&file_path).unwrap();
+                if let Err(e) = socket.write_all(&content[0..]).await {
+                    eprintln!("ERROR -> failed to write to socket; err = {:?}", e);
+                    return;
+                };
 
                 println!("{:?} RECEIVE -> Sha: {} - Size: {:.4} Kb", chrono::offset::Local::now(),id, (&content.len() -1 ) / 1000);
             } else {
