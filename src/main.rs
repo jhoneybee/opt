@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::fs;
 use std::path::Path;
 
@@ -46,40 +45,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (mut socket, _) = listener.accept().await?;
 
         tokio::spawn(async move {
-            let mut buffer = [0; 10240];
+            
             let mut content = BytesMut::with_capacity(1024);
   
-            let mut length_buffer = [0;4];
             let mut file_type_buffer = [0;4];
 
             socket.read(&mut file_type_buffer).await.unwrap();
-            socket.read(&mut length_buffer).await.unwrap();
-
-            let accept_length = as_u32_le(&length_buffer);
-
-            let mut count_length = 0;
 
             loop {
+                let mut length_buffer = [0;4];
 
-                let n = match socket.read(&mut buffer).await {
-                    Ok(n) if n == 0 => n,
-                    Ok(n) => {
-                        n
-                    },
-                    Err(e) => {
-                        eprintln!("ERRPR -> failed to read from socket; err = {:?}", e);
-                        return;
-                    }
-                };
+                socket.read(&mut length_buffer).await.unwrap();
+
+                let accept_length = as_u32_le(&length_buffer);
+
+                println!("accept package size [{}]", accept_length);
+
+                let mut count_length: usize = 0;
+
+                let mut buffer = vec![0; accept_length as usize];
+
+                while count_length < accept_length as usize {
+
+                    let n = match socket.read(&mut buffer[count_length..]).await {
+                        Ok(n) if n == 0 => n,
+                        Ok(n) => {
+                            n
+                        },
+                        Err(e) => {
+                            eprintln!("ERRPR -> failed to read from socket; err = {:?}", e);
+                            return;
+                        }
+                    };
+                    count_length += n;
+                }
                 
-                count_length += n;
-
-                if accept_length == count_length.try_into().unwrap() {
+                content.put(&buffer[..]);
+                if accept_length < 1024 * 1024 * 10{
                     break;
                 }
-                content.put(&buffer[0..n]);
             }
-
 
             let mut hasher = Sha256::new();
             hasher.update(&content);
@@ -104,14 +109,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 let pdf_path = format!("{}.pdf", &file_path);
                 if !Path::new(&pdf_path).exists() {
-                   let output = vbs::ms_export::ms_export_pdf(
+                    vbs::ms_export::ms_export_pdf(
                         file_path.as_str(),
                         &format!(".cache/{}.pdf", id),
                         ms_file_type,
                     ).await.unwrap();
-
-                    let output= String::from_utf8(output.stdout).expect("failed to execute.");
-                    println!("ERRPR -> {}", output)
                 }
 
                 if !Path::new(&pdf_path).exists() {
@@ -123,12 +125,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 socket.write_all(&as_u32_array_u8(pdf_content.len())).await.unwrap();
 
-                if let Err(e) = socket.write_all(&pdf_content[0..]).await {
+                if let Err(e) = socket.write_all(&pdf_content[..]).await {
                     eprintln!("ERROR -> failed to write to socket; err = {:?}", e);
                     return;
                 };
                 socket.flush().await.unwrap();
-                println!("{:?} RECEIVE -> Sha: {} - Size: {:.4} Kb", chrono::offset::Local::now(),id, (&content.len() -1 ) / 1000);
+                println!("{:?} RECEIVE -> Sha: {} - Size: {:.4} Kb", chrono::offset::Local::now(),id, &content.len() / 1000);
             } else {
                 println!("{:?} ERRPR -> Incorrect data format.", chrono::offset::Local::now());
             }

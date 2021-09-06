@@ -16,7 +16,12 @@ pub async fn ms_export_pdf(input: &str, output: &str, file_type: MSFileType) -> 
         MSFileType::PPT => "PPT",
     };
 
-    let command = format!("cscript {}/.scripts/ms-call.vbs {} {} {}", path.display(), input, output, command_type);
+    let real_input_path = format!("{}/{}", path.display(), input);
+    let real_output_path = format!("{}/{}", path.display(), output);
+
+    let command = format!("cscript {}/.scripts/ms-call.vbs {} {} {}", path.display(), real_input_path, real_output_path, command_type);
+
+    println!("{}", command);
 
     Command::new("cmd")
     .args(&["/C", command.as_str()])
