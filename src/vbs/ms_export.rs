@@ -21,8 +21,6 @@ pub async fn ms_export_pdf(input: &str, output: &str, file_type: MSFileType) -> 
 
     let command = format!("cscript {}/.scripts/ms-call.vbs {} {} {}", path.display(), real_input_path, real_output_path, command_type);
 
-    println!("{}", command);
-
     Command::new("cmd")
     .args(&["/C", command.as_str()])
     .output()

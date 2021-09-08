@@ -2,17 +2,18 @@ use std::time::Duration;
 use std::{fs, thread};
 use std::path::Path;
 
+use chrono::Local;
 use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use chrono::{self, Local};
 use sha2::{Sha256, Digest};
 use serde::{Deserialize, Serialize};
 use tokio_cron_scheduler::{Job, JobScheduler};
 use log::{info, error};
 
+use crate::vbs::ms_export::MSFileType;
 extern crate log;
 
-use crate::vbs::ms_export::MSFileType;
+
 
 mod vbs;
 
@@ -51,10 +52,7 @@ struct CacheInfo {
 
 fn lock (hash: &String) {
     let path = format!(".cache/{}.lock", hash);
-    loop {
-        if !Path::new(&path).exists() {
-            break;
-        }
+    while Path::new(&path).exists() {
         thread::sleep(Duration::from_millis(1000))
     }
     fs::write(format!(".cache/{}.lock", hash), "").unwrap();
@@ -66,6 +64,8 @@ fn unlock(hash: &String) {
         fs::remove_file(&path).unwrap();
     }
 }
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -216,7 +216,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         file_path.as_str(),
                         &format!(".cache/{}.pdf", id),
                         ms_file_type,
-                    ).await.unwrap();
+                    ).await.expect_err("");
                 }
                 unlock(&id);
                 
@@ -235,7 +235,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 };
 
                 socket.flush().await.unwrap();
-                info!("RECEIVE -> Sha: {} - Size: {:.4} Kb",id, &content.len() / 1000);
+                info!("Generate  -> Sha: {} - Size: {:.4} Kb",id, &content.len() / 1000);
             } else {
                 error!("Incorrect data format.");
             }
