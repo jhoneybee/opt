@@ -65,8 +65,6 @@ fn unlock(hash: &String) {
     }
 }
 
-
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
@@ -75,7 +73,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let default_config = OptConfig {
             listener: String::from("0.0.0.0:8011"),
             cache_expiration_time: 20160,
-            cache_cron: String::from("0 */1 * * * *"),
+            cache_cron: String::from("0 0 */12 * * *"),
         };
         fs::write(".opt.json", serde_json::to_string_pretty(&default_config).unwrap()).unwrap();
     }
@@ -99,7 +97,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let real_path = last.to_str().unwrap();
 
             let extension = Path::new(&file_name).extension();
-            if extension.expect("").eq("json") {
+
+            if extension.is_some() && extension.unwrap().eq("json") {
                 let info_str = fs::read_to_string(&real_path).unwrap();
                 let info: CacheInfo = serde_json::from_str(info_str.as_str()).unwrap();
 
