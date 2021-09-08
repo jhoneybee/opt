@@ -1,4 +1,5 @@
-use std::{fs};
+use std::time::Duration;
+use std::{fs, thread};
 use std::path::Path;
 
 use tokio::net::TcpListener;
@@ -30,7 +31,6 @@ fn as_u32_array_u8(x:usize) -> [u8;4] {
     return [b1, b2, b3, b4]
 }
 
-
 #[derive(Serialize, Deserialize)]
 struct OptConfig {
     // 当期启动的端口号
@@ -49,6 +49,23 @@ struct CacheInfo {
     last_visit_time: i64,
 }
 
+fn lock (hash: &String) {
+    let path = format!(".cache/{}.lock", hash);
+    loop {
+        if !Path::new(&path).exists() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(1000))
+    }
+    fs::write(format!(".cache/{}.lock", hash), "").unwrap();
+}
+
+fn unlock(hash: &String) {
+    let path = format!(".cache/{}.lock", hash);
+    if Path::new(&path).exists() {
+        fs::remove_file(&path).unwrap();
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -153,9 +170,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let result = hasher.finalize();
 
             if content.len() > 1 {
+
                 let file_type = as_u32_le(&file_type_buffer);
                 
+                let ms_file_type;
+                if file_type  == 0 {
+                    ms_file_type = MSFileType::WORD
+                } else if file_type == 1 {
+                    ms_file_type = MSFileType::EXCEL
+                } else if file_type == 2 {
+                    ms_file_type = MSFileType::PPT
+                } else {
+                    socket.shutdown().await.unwrap();
+                    return;
+                }
+
                 let id = format!("{:X}", result);
+              
                 let file_path = format!(".cache/{}", id);
                 
                 if !Path::new(&file_path).exists() {
@@ -176,20 +207,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                     fs::write(&info_file_path,serde_json::to_string(&info).unwrap()).unwrap(); 
                 }
-            
-                let ms_file_type;
-                if file_type  == 0 {
-                    ms_file_type = MSFileType::WORD
-                } else if file_type == 1 {
-                    ms_file_type = MSFileType::EXCEL
-                } else if file_type == 2 {
-                    ms_file_type = MSFileType::PPT
-                } else {
-                    socket.shutdown().await.unwrap();
-                    return;
-                }
-
+                
                 let pdf_path = format!("{}.pdf", &file_path);
+
+                lock(&id);
                 if !Path::new(&pdf_path).exists() {
                     vbs::ms_export::ms_export_pdf(
                         file_path.as_str(),
@@ -197,7 +218,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         ms_file_type,
                     ).await.unwrap();
                 }
-
+                unlock(&id);
+                
                 if !Path::new(&pdf_path).exists() {
                     error!(" {}", "Pdf file generation failed.");
                     return;
@@ -211,6 +233,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     error!("failed to write to socket; err = {:?}", e);
                     return;
                 };
+
                 socket.flush().await.unwrap();
                 info!("RECEIVE -> Sha: {} - Size: {:.4} Kb",id, &content.len() / 1000);
             } else {

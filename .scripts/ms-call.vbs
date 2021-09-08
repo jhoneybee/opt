@@ -4,20 +4,20 @@ Set oArgs = WScript.Arguments
             wrd.Visible = false
             wrd.Documents.Open oArgs(0)
             wrd.ActiveDocument.SaveAs2 oArgs(1), 17
-            wrd.Quit
+            wrd.Quit -1
         Set wrd = Nothing
     ElseIf oArgs(2) = "EXCEL" Then
         Set excel = GetObject("", "Excel.Application")
             excel.Visible = False
             excel.Workbooks.Open oArgs(0)
             excel.ActiveSheet.ExportAsFixedFormat 0, oArgs(1)
-            excel.Quit
+            excel.Quit -1
         Set excel = Nothing
     ElseIf oArgs(2) = "PPT" Then
         Set msppt = GetObject("", "Powerpoint.Application")
             msppt.Presentations.Open oArgs(0),,,true
             msppt.ActivePresentation.SaveAs oArgs(1), 32
-            msppt.Quit
+            msppt.Quit -1
         Set msppt = Nothing
     End If
 Set oArgs = Nothing
